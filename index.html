@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<script src="https://d3js.org/d3.v3.min.js"></script>
+<script src="https://d3js.org/topojson.v1.min.js"></script>
+
+<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+<script src='https://api.tiles.mapbox.com/mapbox-gl-js/v1.4.1/mapbox-gl.js'></script>
+<link href='https://api.tiles.mapbox.com/mapbox-gl-js/v1.4.1/mapbox-gl.css' rel='stylesheet' />
+<link rel='stylesheet' href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.4.2/mapbox-gl-geocoder.css' type='text/css' />
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+<script src='csv2geojson.js'></script>
+
+<script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.4.2/mapbox-gl-geocoder.min.js'></script>
+
+<!-- Promise polyfill script required to use Mapbox GL Geocoder in IE 11 -->
+<script src="https://cdn.jsdelivr.net/npm/es6-promise@4/dist/es6-promise.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/es6-promise@4/dist/es6-promise.auto.min.js"></script>
+
+<script src='//api.tiles.mapbox.com/mapbox.js/plugins/turf/v2.0.0/turf.min.js'></script>
+
+<style>
+    body { margin:0; padding:0; }
+    #map { position:absolute; top:0; bottom:0; width:100%; }
+	
+	h2,
+	h3 {
+	  margin: 10px;
+	  font-size: 1em;
+	}
+
+	h3 {
+	  font-size: 1em;
+	}
+	h4 {
+		font-size: 1.5em;
+		margin: 10px;
+	}
+	p {
+	  font-size: 0.85em;
+	  margin: 10px;
+	  text-align: left;
+	}
+	.map-overlay {
+	  position: absolute;
+	  bottom: 0;
+	  right: 0;
+	  background: rgba(255, 255, 255, 0.8);
+	  margin-right: 20px;
+	  font-family: Arial, sans-serif;
+	  overflow: auto;
+	  border-radius: 3px;
+	}
+	.chart-stage {
+	  position: absolute;
+	  bottom: 0;
+	  right: 0;
+	  margin-right: 20px;
+	  margin-bottom: 50px;
+	  background: rgba(255, 255, 255, 0.8);
+	  font-family: Arial, sans-serif;
+	  overflow: auto;
+	  border-radius: 3px;
+	}
+
+	.description-overlay {
+	  position: absolute;
+	  bottom: 0;
+	  left: 0;
+	  background: rgba(255, 255, 255);
+	  margin-left: 20px;
+	  font-family: Arial, sans-serif;
+	  overflow: auto;
+	  border-radius: 3px;
+	  border: 2px solid black;
+	}
+	#features {
+	  top: 0;
+	  height: 300px;
+	  margin-top: 20px;
+	  width: 300px;
+	}
+	#desc-features {
+	  top: 0;
+	  height: 720px;
+	  margin-top: 20px;
+	  width: 500px;
+	}
+
+	#legend {
+	  padding: 10px;
+	  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+	  line-height: 18px;
+	  height: 150px;
+	  margin-bottom: 40px;
+	  width: 100px;
+	}
+
+	.legend-key {
+	  display: inline-block;
+	  border-radius: 20%;
+	  width: 10px;
+	  height: 10px;
+	  margin-right: 5px;
+	}
+	.geocoder {
+		position:absolute;
+		z-index:1;
+		width:300px;			
+		top: 0;
+		right: 0;
+		margin-right: 20px;
+		margin-top: 330px;
+	}
+	.mapboxgl-ctrl-geocoder { 
+		min-width:100%; 
+	}
+	
+</style>
+
+</head>
+<body>
+
+<div id='map'></div>
+<div id='geocoder' class='geocoder'></div>
+<div class='map-overlay' id='features'><h2>LOCAL LAW 92/94 BUILDINGS</h2><div id='pd'><p>Click on a point for details...</p></div></div>
+
+<script>
+mapboxgl.accessToken = 'pk.eyJ1IjoiYm1hbmNlbGwiLCJhIjoiY2oxZ24yd3E2MDAzdDJ3cG1jenB2dTl3cSJ9.38jhDPw4NnOpKK2mMmF_xQ';//'pk.eyJ1IjoiYWFyb25kZW5uaXMiLCJhIjoiem5LLURoYyJ9.T3tswGTI5ve8_wE-a02cMw';
+var map = new mapboxgl.Map({
+  container: 'map', // container id
+  style: 'mapbox://styles/mapbox/dark-v10', //stylesheet location
+  center: [-73.973136,40.731069], // starting position
+  zoom: 12 // starting zoom
+});
+
+$(document).ready(function() {
+    $.ajax({
+        type: "GET",
+        url: 'data/LL92_94- RB0193 Required-withBIN.csv',
+        dataType: "text",
+        success: function(csvData) {makeGeoJSON(csvData);}
+     });
+});
+
+function makeGeoJSON(csvData) {
+    csv2geojson.csv2geojson(csvData, {
+        latfield: 'Latitude Point',
+        lonfield: 'Longitude Point',
+        delimiter: ','
+    }, function(err, data) {
+        map.on('load', function () {
+		
+			map.addSource('LL9294', { 'type': 'geojson', 'data': data, 'generateId': true });
+
+            map.addLayer({
+                'id': 'LocalLaw9294',
+				'type': 'circle',
+				'source': 'LL9294',
+                'paint': {
+					'circle-radius': 4,
+					'circle-color': '#78f580'
+				}
+            });
+        });    
+    });
+}
+  
+
+var clickStateId = null;
+/*
+map.on('load', function() {
+  loadMN("data/MapPLUTO_19v2_MN_TOPOJSON.json", function(data) {
+
+    map.addSource('BBL_MN', { 'type': 'geojson', 'data': data, 'generateId': true });
+
+      map.addLayer({
+          'id': 'lotsMN', 
+          'type': 'fill',
+          'source': 'BBL_MN',
+		"paint": {
+			'fill-opacity': 0.2,
+			'fill-color': ["case",
+				["boolean", ["feature-state", "click"], false],
+				'#0df7ff',
+				'#fcf403'
+				],			
+			'fill-outline-color': '#e8f603'
+		}
+
+      })
+	  
+	map.setFilter("lotsMN", ["==", "CD", 101]);
+	  
+  });
+    
+});
+
+function loadMN(file, lots) {
+  d3.json(file, function(error, topolotsMN) {
+
+    var lotsMN = topojson.feature(topolotsMN, topolotsMN.objects.MapPLUTO_19v2_MN_TOPOJSON),
+        neighbors = topojson.neighbors(topolotsMN.objects.MapPLUTO_19v2_MN_TOPOJSON.geometries);
+
+    lotsMN.features.map(function(d,i) {
+      d.properties.fill = d3.max(neighbors[i], function(n) {
+        return lotsMN.features[n].properties.fill >= 0 ? lotsMN.features[n].properties.fill + 1 : 0;
+      });
+    });
+
+
+    lots(lotsMN)
+  });
+}
+*/
+
+
+map.on("click", "LocalLaw9294", function(e) {
+		if (e.features.length > 0) {
+		console.log(e.features[0])
+			if (clickStateId) {
+				map.setFeatureState({source: 'LL9294', id: clickStateId}, { click: false});
+			}
+			clickStateId = e.features[0].id;
+			map.setFeatureState({source: 'LL9294', id: clickStateId}, { click: true});
+		}
+		console.log('clickStateId = ',clickStateId)
+});
+
+map.on('click', function(e) {
+  var lots_topojson = map.queryRenderedFeatures(e.point, {
+    layers: ['LocalLaw9294']
+  });
+	if (lots_topojson.length > 0) {
+		document.getElementById('pd').innerHTML = '<p>'+'BIN: ' +lots_topojson[0].properties['BIN Number'] +'</p>' + '<p>'+'Block: ' +lots_topojson[0].properties.Block + '<p>'+'Lot: ' +lots_topojson[0].properties.Lot +'</p>' +'</p>' + '<p>'+'Job Number: ' +lots_topojson[0].properties['Job Number'] + '</p>'
+		+ '<p>'+'Job Type: ' +lots_topojson[0].properties['Job Type'] + '</p>'+ '<p>'+'Application Process Date: ' +lots_topojson[0].properties['Application Process Date'] + '</p>';
+	  } else {
+		document.getElementById('pd').innerHTML = '<p>Click on a lot for details...</p>';
+		map.setFeatureState({source: 'LL9294', id: clickStateId}, { click: false});
+  }
+
+});
+
+// Change the cursor to a pointer when the mouse is over the lots geojson layer.
+map.on('mouseenter', 'LocalLaw9294', function () {
+map.getCanvas().style.cursor = 'pointer';
+});
+ 
+// Change it back to a pointer when it leaves.
+map.on('mouseleave', 'LocalLaw9294', function () {
+map.getCanvas().style.cursor = '';
+});
+
+
+var geocoder = new MapboxGeocoder({
+accessToken: mapboxgl.accessToken,
+mapboxgl: mapboxgl
+});
+ 
+document.getElementById('geocoder').appendChild(geocoder.onAdd(map));
+
+</script>
